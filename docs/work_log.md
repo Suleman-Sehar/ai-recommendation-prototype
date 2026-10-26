@@ -41,10 +41,10 @@
 - Implemented RandomRecommender (seed-controlled, excludes completed), PopularityRecommender (ranks by completed count across train users), UserCFRecommender (cosine similarity on user-item matrix, K=20 neighbors, cold-start falls back to popularity)
 - Common interface: recommend(user_id, n=10) -> list of course_ids
 - Hard guardrail: completed courses always excluded
-- Fit only on train users and train interactions
+- Fit only on train users and train interactions (derived from train_interactions split)
 - Each recommender saves fitted state via pickle to models/
-- Evaluation on test users (36 users, 34 with ground truth): Precision@10, Recall@10, NDCG@10
-- Results: random P@10=0.0059, popularity P@10=0.0088, user_cf P@10=0.0088 (CF cold-start falls back to popularity)
+- Re-evaluated on new temporal splits: 67 test users with ground truth
+- Results: random P@10=0.0015, popularity P@10=0.0015, user_cf P@10=0.0
 - Saved reports/eval_20261026/baselines.md and baselines.json (committed)
 - Wrote tests/test_baselines.py: 11 tests covering interface, completed-exclusion, random reproducibility, popularity ranking, CF cold-start fallback, CF completed-exclusion, evaluation structure
 - All 11 tests pass

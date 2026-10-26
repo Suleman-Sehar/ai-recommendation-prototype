@@ -38,3 +38,9 @@
 - Metrics: Precision@10, Recall@10, NDCG@10
 - Results: random P@10=0.0059, popularity P@10=0.0088, user_cf P@10=0.0088 (CF cold-start falls back to popularity since test users have no train interactions)
 - Reports committed to reports/eval_20261026/baselines.md and baselines.json
+
+## 2026-10-26 — Phase 2 Re-run (after temporal split fix)
+- Baselines re-evaluated on per-user temporal splits: 67 test users with ground truth
+- Results: random P@10=0.0015, popularity P@10=0.0015, user_cf P@10=0.0
+- CF is 0.0 because temporal split weakens signal (predicting future completions from past interactions)
+- Reports overwritten in reports/eval_20261026/baselines.md and baselines.json

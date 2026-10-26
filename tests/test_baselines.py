@@ -18,6 +18,15 @@ from src.recommend.baselines import (
 )
 
 
+def _user_sets_from_splits(splits: dict, interactions: list[dict]) -> tuple[set[str], set[str]]:
+    """Derive train_users and test_users from interaction-level splits."""
+    train_ids = set(splits["train_interactions"])
+    test_ids = set(splits["test_holdout"])
+    train_users = {it["user_id"] for it in interactions if it["id"] in train_ids}
+    test_users = {it["user_id"] for it in interactions if it["id"] in test_ids}
+    return train_users, test_users
+
+
 @pytest.fixture(scope="module")
 def data():
     catalog = load_catalog(CATALOG_PATH)
@@ -30,7 +39,7 @@ def data():
 def fitted_recs(data):
     catalog, interactions, splits = data
     df = pd.DataFrame(interactions)
-    train_users = set(splits["train_users"])
+    train_users, _ = _user_sets_from_splits(splits, interactions)
     recs = {
         "random": RandomRecommender(seed=42),
         "popularity": PopularityRecommender(),
@@ -59,11 +68,10 @@ class TestCommonInterface:
 
 class TestCompletedExclusion:
     def test_completed_courses_never_recommended(self, fitted_recs, data):
-        recs, splits, catalog, df = fitted_recs
-        _, _, splits2 = data
-        assert splits == splits2
-        df_train = pd.DataFrame(df)
-        train_users = set(splits["train_users"])
+        recs, splits, catalog, _ = fitted_recs
+        _, interactions, _ = data
+        train_users, _ = _user_sets_from_splits(splits, interactions)
+        df_train = pd.DataFrame(interactions)
         train_df = df_train[df_train["user_id"].isin(train_users)]
         completed_train = train_df[train_df["action"] == "completed"]
 
@@ -81,7 +89,7 @@ class TestRandomReproducibility:
     def test_random_reproducible_same_seed(self, data):
         catalog, interactions, splits = data
         df = pd.DataFrame(interactions)
-        train_users = set(splits["train_users"])
+        train_users, _ = _user_sets_from_splits(splits, interactions)
 
         r1 = RandomRecommender(seed=42)
         r1.fit(df, train_users, catalog)
@@ -94,7 +102,7 @@ class TestRandomReproducibility:
     def test_random_different_seed_different_output(self, data):
         catalog, interactions, splits = data
         df = pd.DataFrame(interactions)
-        train_users = set(splits["train_users"])
+        train_users, _ = _user_sets_from_splits(splits, interactions)
 
         r1 = RandomRecommender(seed=1)
         r1.fit(df, train_users, catalog)
@@ -112,7 +120,7 @@ class TestPopularity:
     def test_popularity_ranks_by_completed_count(self, data):
         catalog, interactions, splits = data
         df = pd.DataFrame(interactions)
-        train_users = set(splits["train_users"])
+        train_users, _ = _user_sets_from_splits(splits, interactions)
         train_df = df[df["user_id"].isin(train_users)]
         completed = train_df[train_df["action"] == "completed"]
         counts = completed["course_id"].value_counts()
@@ -126,10 +134,11 @@ class TestPopularity:
         assert top5 == list(counts.index[:5])
 
     def test_popularity_excludes_completed(self, fitted_recs, data):
-        recs, splits, catalog, df = fitted_recs
+        recs, splits, catalog, _ = fitted_recs
+        _, interactions, _ = data
         rec = recs["popularity"]
-        train_users = set(splits["train_users"])
-        df_train = pd.DataFrame(df)
+        train_users, _ = _user_sets_from_splits(splits, interactions)
+        df_train = pd.DataFrame(interactions)
         train_df = df_train[df_train["user_id"].isin(train_users)]
         completed_train = train_df[train_df["action"] == "completed"]
 
@@ -153,10 +162,11 @@ class TestUserCF:
         assert result_cf == result_pop
 
     def test_cf_excludes_completed(self, fitted_recs, data):
-        recs, splits, catalog, df = fitted_recs
+        recs, splits, catalog, _ = fitted_recs
+        _, interactions, _ = data
         rec = recs["user_cf"]
-        train_users = set(splits["train_users"])
-        df_train = pd.DataFrame(df)
+        train_users, _ = _user_sets_from_splits(splits, interactions)
+        df_train = pd.DataFrame(interactions)
         train_df = df_train[df_train["user_id"].isin(train_users)]
         completed_train = train_df[train_df["action"] == "completed"]
 
@@ -184,9 +194,9 @@ class TestEvaluation:
             assert 0.0 <= m["ndcg_at_10"] <= 1.0
 
     def test_evaluation_uses_test_users_only(self, data):
-        catalog, interactions, splits = data
+        _, interactions, splits = data
         results = evaluate_baselines()
-        test_users = set(splits["test_users"])
+        _, test_users = _user_sets_from_splits(splits, interactions)
         # Each recommender evaluates the same set of test users with ground truth
         for m in results.values():
             assert m["num_test_users_evaluated"] <= len(test_users)

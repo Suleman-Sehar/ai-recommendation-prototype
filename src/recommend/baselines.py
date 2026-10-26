@@ -214,11 +214,18 @@ def evaluate_baselines() -> dict:
     interactions = load_interactions(INTERACTIONS_PATH)
     splits = load_splits(SPLITS_PATH)
 
-    train_users = set(splits["train_users"])
-    test_users = set(splits["test_users"])
+    train_ids = set(splits["train_interactions"])
+    test_ids = set(splits["test_holdout"])
     challenge_users = set(splits["challenge_users"])
 
     df = pd.DataFrame(interactions)
+    df["id"] = df["id"].astype(str)
+
+    # Derive user sets from interaction splits
+    train_df = df[df["id"].isin(train_ids)]
+    test_df = df[df["id"].isin(test_ids)]
+    train_users = set(train_df["user_id"].tolist())
+    test_users = set(test_df["user_id"].tolist())
 
     recs = {
         "random": RandomRecommender(),
@@ -227,13 +234,12 @@ def evaluate_baselines() -> dict:
     }
 
     for name, rec in recs.items():
-        rec.fit(df, train_users, catalog)
+        rec.fit(train_df, train_users, catalog)
         models_dir = MODELS_DIR
         models_dir.mkdir(parents=True, exist_ok=True)
         rec.save(models_dir / f"{name}.pkl")
 
     ground_truth: dict[str, set[str]] = {}
-    test_df = df[df["user_id"].isin(test_users)]
     completed_test = test_df[test_df["action"] == "completed"]
     for uid, group in completed_test.groupby("user_id"):
         ground_truth[uid] = set(group["course_id"].tolist())
