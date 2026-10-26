@@ -178,6 +178,62 @@ class TestUserCF:
             assert set(result).isdisjoint(completed)
 
 
+class TestWeightedCF:
+    """Weighted CF should score viewed interactions of similar users,
+    giving it a candidate pool where binary (completed-only) CF has none."""
+
+    def _synthetic_catalog(self) -> list[dict]:
+        return [
+            {"id": "course-G", "title": "G", "tags": "a|b", "difficulty": "beginner", "duration_minutes": "60", "description": "desc G"},
+            {"id": "course-H", "title": "H", "tags": "a|b", "difficulty": "beginner", "duration_minutes": "60", "description": "desc H"},
+            {"id": "course-I", "title": "I", "tags": "c|d", "difficulty": "beginner", "duration_minutes": "60", "description": "desc I"},
+            {"id": "course-J", "title": "J", "tags": "e|f", "difficulty": "beginner", "duration_minutes": "60", "description": "desc J"},
+        ]
+
+    def _synthetic_interactions(self) -> list[dict]:
+        return [
+            {"user_id": "user-A", "course_id": "course-G", "action": "viewed", "rating": "", "timestamp": "2024-01-01T00:00:00Z"},
+            {"user_id": "user-A", "course_id": "course-H", "action": "viewed", "rating": "", "timestamp": "2024-01-02T00:00:00Z"},
+            {"user_id": "user-B", "course_id": "course-G", "action": "viewed", "rating": "", "timestamp": "2024-01-03T00:00:00Z"},
+            {"user_id": "user-B", "course_id": "course-H", "action": "viewed", "rating": "", "timestamp": "2024-01-04T00:00:00Z"},
+            {"user_id": "user-B", "course_id": "course-I", "action": "completed", "rating": "", "timestamp": "2024-01-05T00:00:00Z"},
+            {"user_id": "user-C", "course_id": "course-J", "action": "completed", "rating": "", "timestamp": "2024-01-06T00:00:00Z"},
+        ]
+
+    def test_weighted_cf_recommends_viewed_course_of_similar_user(self):
+        catalog = self._synthetic_catalog()
+        interactions = self._synthetic_interactions()
+        df = pd.DataFrame(interactions)
+        train_users = {"user-A", "user-B", "user-C"}
+
+        cf = UserCFRecommender(k_neighbors=20)
+        cf.fit(df, train_users, catalog)
+
+        recs = cf.recommend("user-A", 10)
+        # course-G was viewed by similar user-B (shared viewed courses G, H)
+        # Weighted CF scores viewed interactions, so course-G should be recommended
+        assert "course-G" in recs, f"Weighted CF should recommend course-G, got {recs}"
+
+    def test_binary_cf_misses_viewed_interactions(self):
+        # Simulate old binary CF: only completed interactions of similar users are scored
+        interactions = self._synthetic_interactions()
+        completed_by_user: dict[str, set[str]] = {}
+        for _, row in pd.DataFrame(interactions).iterrows():
+            if row["action"] == "completed":
+                completed_by_user.setdefault(row["user_id"], set()).add(row["course_id"])
+
+        # user-B completed: {course-I}, user-C completed: {course-J}
+        # Neither is course-G (which was only viewed, never completed, by anyone)
+        assert "course-G" not in completed_by_user.get("user-B", set())
+        assert "course-G" not in completed_by_user.get("user-C", set())
+
+        # Binary CF scoring pool contains only course-I and course-J, never course-G
+        all_binary_scores = set()
+        for courses in completed_by_user.values():
+            all_binary_scores.update(courses)
+        assert "course-G" not in all_binary_scores
+
+
 class TestEvaluation:
     def test_evaluate_returns_all_three(self, fitted_recs, data):
         catalog, interactions, splits = data

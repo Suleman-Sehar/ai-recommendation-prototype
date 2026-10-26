@@ -118,14 +118,39 @@ class PopularityRecommender(BaseRecommender):
 class UserCFRecommender(BaseRecommender):
     name = "user_cf"
 
+    # Signal weights for interaction types
+    SIGNAL_WEIGHTS = {
+        "completed": 1.0,
+        "rated_high": 0.8,   # rated >= 4
+        "rated_low": 0.3,    # rated 1-3
+        "viewed": 0.1,
+    }
+
     def __init__(self, k_neighbors: int = 20, seed: int = 42):
         super().__init__(seed)
         self.k_neighbors = k_neighbors
         self.user_index: dict[str, int] = {}
         self.course_index: dict[str, int] = {}
-        self.interaction_matrix: np.ndarray | None = None
-        self.similarity_matrix: np.ndarray | None = None
+        self.interaction_matrix = None
+        self.similarity_matrix = None
         self.popularity_fallback: PopularityRecommender | None = None
+        # Per-user weighted interactions for scoring aggregation
+        self.user_weighted_interactions: dict[str, list[tuple[str, float]]] = {}
+
+    def _signal_weight(self, action: str, rating: str | None) -> float:
+        if action == "completed":
+            return self.SIGNAL_WEIGHTS["completed"]
+        if action == "rated" and rating is not None and str(rating).strip() != "":
+            try:
+                r = float(rating)
+            except ValueError:
+                return self.SIGNAL_WEIGHTS["rated_low"]
+            if r >= 4.0:
+                return self.SIGNAL_WEIGHTS["rated_high"]
+            return self.SIGNAL_WEIGHTS["rated_low"]
+        if action == "viewed":
+            return self.SIGNAL_WEIGHTS["viewed"]
+        return self.SIGNAL_WEIGHTS["viewed"]
 
     def fit(self, interactions_df, train_user_ids, catalog):
         super().fit(interactions_df, train_user_ids, catalog)
@@ -141,6 +166,8 @@ class UserCFRecommender(BaseRecommender):
         n_courses = len(self.all_course_ids)
         matrix = np.zeros((n_users, n_courses), dtype=np.float64)
 
+        self.user_weighted_interactions = {uid: [] for uid in users}
+
         if interactions_df is not None and not interactions_df.empty:
             train_df = interactions_df[interactions_df["user_id"].isin(train_user_ids)]
             for _, row in train_df.iterrows():
@@ -150,11 +177,9 @@ class UserCFRecommender(BaseRecommender):
                 rating = row["rating"]
                 if uid not in self.user_index or cid not in self.course_index:
                     continue
-                if action == "rated" and str(rating).strip() != "":
-                    value = float(rating)
-                else:
-                    value = 1.0
-                matrix[self.user_index[uid], self.course_index[cid]] = value
+                weight = self._signal_weight(action, rating)
+                matrix[self.user_index[uid], self.course_index[cid]] = weight
+                self.user_weighted_interactions[uid].append((cid, weight))
 
         self.interaction_matrix = matrix
 
@@ -184,8 +209,9 @@ class UserCFRecommender(BaseRecommender):
             if sim_val <= 0:
                 continue
             sim_uid = [uid for uid, idx in self.user_index.items() if idx == sim_idx][0]
-            for cid in self.completed_by_user.get(sim_uid, set()):
-                scores[cid] += sim_val
+            # Aggregate ALL interactions of similar user, weighted by signal
+            for cid, weight in self.user_weighted_interactions.get(sim_uid, []):
+                scores[cid] += sim_val * weight
 
         ranked = sorted(scores.keys(), key=lambda c: scores[c], reverse=True)
         if not ranked:

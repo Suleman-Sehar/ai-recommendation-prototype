@@ -57,3 +57,12 @@
 - New metrics module at src/evaluate/metrics.py.
 - Results at K=10: random P@10=0.0059, popularity P@10=0.0047, user_cf P@10=0.0. Hit Rate@10: random 0.0588, popularity 0.0471, user_cf 0.0.
 - Reports overwritten in reports/eval_20261026/baselines.md and baselines.json
+
+## 2026-10-26 — Phase 2 Fix: CF weighted interaction signals
+- CF with binary signals scored 0.0 Hit Rate@10 because similar users' sparse completions did not overlap with test holdout; switched to weighted signals to give CF meaningful candidate pool.
+- Signal weights: completed=1.0, rated>=4=0.8, rated 1-3=0.3, viewed=0.1
+- Matrix built with weighted signals; scoring aggregates ALL interactions of similar users (weighted), not just completed
+- Exclusion list remains train-completed only (correct as-is)
+- Results at K=10: random Hit=0.0588, popularity Hit=0.0471, user_cf Hit=0.0118 (was 0.0)
+- Added tests/test_baselines.py TestWeightedCF: 2 tests verifying weighted CF scores viewed interactions where binary CF misses
+- Reports overwritten in reports/eval_20261026/baselines.md and baselines.json
