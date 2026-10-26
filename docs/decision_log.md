@@ -19,3 +19,14 @@
 - Challenge set: 20 users designated in splits.json, held out from train/test split
 - Train/test: 80/20 user-level split, no user appears in both
 - Generator writes to data/ (gitignored); checksums.json enables reproducibility verification
+
+## 2026-10-26 — Phase 2
+- Three recommenders: Random (seed-controlled), Popularity (completed-count ranking), UserCF (cosine similarity, K=20 neighbors, cold-start -> popularity)
+- Common interface: recommend(user_id, n=10) -> list[str]
+- Hard guardrail: completed courses always excluded from recommendations
+- Fit only on train users and train interactions; test/challenge data never used in fit
+- Fitted state saved via pickle to models/{recommender}.pkl for reuse in evaluation
+- Evaluation on test users only (36 users, 34 with completed-course ground truth)
+- Metrics: Precision@10, Recall@10, NDCG@10
+- Results: random P@10=0.0059, popularity P@10=0.0088, user_cf P@10=0.0088 (CF cold-start falls back to popularity since test users have no train interactions)
+- Reports committed to reports/eval_20261026/baselines.md and baselines.json

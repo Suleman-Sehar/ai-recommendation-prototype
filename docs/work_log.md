@@ -23,3 +23,16 @@
 - Writes catalog.csv, users.csv, interactions.csv, splits.json, checksums.json (MD5)
 - Wrote tests/test_generator.py: 30 tests covering schema, constraints, distribution, splits, reproducibility
 - All 30 tests pass
+
+## 2026-10-26 — Phase 2: Baselines
+- Created src/recommend/__init__.py and src/recommend/baselines.py
+- Implemented RandomRecommender (seed-controlled, excludes completed), PopularityRecommender (ranks by completed count across train users), UserCFRecommender (cosine similarity on user-item matrix, K=20 neighbors, cold-start falls back to popularity)
+- Common interface: recommend(user_id, n=10) -> list of course_ids
+- Hard guardrail: completed courses always excluded
+- Fit only on train users and train interactions
+- Each recommender saves fitted state via pickle to models/
+- Evaluation on test users (36 users, 34 with ground truth): Precision@10, Recall@10, NDCG@10
+- Results: random P@10=0.0059, popularity P@10=0.0088, user_cf P@10=0.0088 (CF cold-start falls back to popularity)
+- Saved reports/eval_20261026/baselines.md and baselines.json (committed)
+- Wrote tests/test_baselines.py: 11 tests covering interface, completed-exclusion, random reproducibility, popularity ranking, CF cold-start fallback, CF completed-exclusion, evaluation structure
+- All 11 tests pass
