@@ -59,3 +59,15 @@
 - Results at K=10: random Hit=0.0588, popularity Hit=0.0471, user_cf Hit=0.0118 (was 0.0)
 - Added tests/test_baselines.py TestWeightedCF: 2 tests verifying weighted CF scores viewed interactions where binary CF misses
 - All 45 tests pass (32 generator + 13 baselines including 2 new weighted CF tests)
+
+## 2026-10-26 — Phase 3: Content-based recommender
+- Implemented ContentBased in src/recommend/content.py
+- Feature matrix: TF-IDF on tags (pipe-separated, each tag as token) with weight 0.7 + TF-IDF on description with weight 0.3, concatenated via scipy sparse matrices (fit only on catalog)
+- User profile: weighted average of interacted course vectors (completed=1.0, rated>=4=0.8, rated 1-3=0.3, viewed=0.1), same weights as CF
+- Recommend: cosine similarity between profile and all course vectors, exclude train-completed courses, return top-N
+- Cold-start (zero interactions): falls back to global popularity (same as CF)
+- Common interface: ContentBased.fit(catalog_df, interactions_train_df), ContentBased.recommend(user_id, n=10) -> list of course_ids
+- Evaluated on 85 test users at K=5,10,20: k5 P=0.0047 R=0.0176 NDCG=0.0087 HR=0.0235; k10 P=0.0024 R=0.0176 NDCG=0.0087 HR=0.0235; k20 P=0.0029 R=0.0471 NDCG=0.0163 HR=0.0588
+- Saved reports/eval_20261026/content_based.md and .json (committed)
+- Wrote tests/test_content.py: 6 tests covering TF-IDF shape, weighted profile, completed exclusion, cold-start fallback, returns exactly N items, cosine similarity range
+- All 6 tests pass

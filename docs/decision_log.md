@@ -66,3 +66,9 @@
 - Results at K=10: random Hit=0.0588, popularity Hit=0.0471, user_cf Hit=0.0118 (was 0.0)
 - Added tests/test_baselines.py TestWeightedCF: 2 tests verifying weighted CF scores viewed interactions where binary CF misses
 - Reports overwritten in reports/eval_20261026/baselines.md and baselines.json
+
+## 2026-10-26 — Phase 3 Decision
+- Combined tags and description via separate TF-IDF vectorizers concatenated with sparse hstack and fixed weights (tags 0.7, description 0.3) as specified; each pipe token treated as separate word by space replacement.
+- User profile built as weighted average of interacted item vectors with same interaction weights as CF for consistency.
+- Excluded train-completed courses from recommendations; cold-start with no interactions falls back to PopularityRecommender.
+- Evaluated on test users with same ground truth definition (completed + rated>=4) as baselines for comparability.
