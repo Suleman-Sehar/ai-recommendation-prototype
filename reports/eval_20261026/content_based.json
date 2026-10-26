@@ -1,0 +1,23 @@
+{
+  "k5": {
+    "precision": 0.0047,
+    "recall": 0.0176,
+    "ndcg": 0.0087,
+    "hit_rate": 0.0235,
+    "users_evaluated": 85
+  },
+  "k10": {
+    "precision": 0.0024,
+    "recall": 0.0176,
+    "ndcg": 0.0087,
+    "hit_rate": 0.0235,
+    "users_evaluated": 85
+  },
+  "k20": {
+    "precision": 0.0029,
+    "recall": 0.0471,
+    "ndcg": 0.0163,
+    "hit_rate": 0.0588,
+    "users_evaluated": 85
+  }
+}
