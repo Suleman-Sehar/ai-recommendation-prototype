@@ -44,3 +44,9 @@
 - Results: random P@10=0.0015, popularity P@10=0.0015, user_cf P@10=0.0
 - CF is 0.0 because temporal split weakens signal (predicting future completions from past interactions)
 - Reports overwritten in reports/eval_20261026/baselines.md and baselines.json
+
+## 2026-10-26 — Phase 2 Fix: Ground truth expanded to completed + rated>=4
+- Ground truth expanded from completed-only to completed+rated>=4 because 61% of test users had empty ground truth under completed-only definition. Decision made before Phase 3, not post-hoc.
+- Baselines re-evaluated with new ground truth: 85 test users with non-empty ground truth (up from 67), avg ground truth size increased.
+- Results: random P@10=0.0, popularity P@10=0.0047, user_cf P@10=0.0012
+- Reports overwritten in reports/eval_20261026/baselines.md and baselines.json

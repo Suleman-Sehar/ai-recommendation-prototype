@@ -4,9 +4,9 @@ Date: 20261026
 
 | Recommender | Precision@10 | Recall@10 | NDCG@10 | Users |
 |---|---|---|---|---|
-| random | 0.0015 | 0.005 | 0.007 | 67 |
-| popularity | 0.0015 | 0.005 | 0.0027 | 67 |
-| user_cf | 0.0 | 0.0 | 0.0 | 67 |
+| random | 0.0 | 0.0 | 0.0 | 85 |
+| popularity | 0.0047 | 0.0333 | 0.0128 | 85 |
+| user_cf | 0.0012 | 0.0118 | 0.0034 | 85 |
 
-Ground truth: courses completed by test users in held-out interactions.
+Ground truth: completed courses + courses rated >= 4 by test users in held-out interactions.
 Fit only on train users and train interactions.

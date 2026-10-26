@@ -65,6 +65,7 @@ Distribution: 80% of users have 3–15 interactions (regular); 15% have 16–40 
 | Coverage (catalog % ever recommended) | — | ≥ 25% | — |
 | Diversity (unique tags in top-10) | — | ≥ 6 | — |
 | Cold-start Precision@10 | — | ≥ random + 0.05 absolute | — |
+Ground truth definition: completed courses + courses rated >= 4 in the test holdout. Amended 2026-10-26: original completed-only ground truth left 61% of users with empty holdout (too sparse); expanded to include rated>=4 as strong positive signal.
 
 Targets are floor targets, not ceilings. Baseline vs each approach reported in dated evidence files.
 

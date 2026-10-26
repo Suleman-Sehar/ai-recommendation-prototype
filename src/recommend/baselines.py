@@ -240,8 +240,12 @@ def evaluate_baselines() -> dict:
         rec.save(models_dir / f"{name}.pkl")
 
     ground_truth: dict[str, set[str]] = {}
+    # Ground truth includes completed + rated>=4; rated>=4 treated as strong implicit positive signal.
     completed_test = test_df[test_df["action"] == "completed"]
-    for uid, group in completed_test.groupby("user_id"):
+    rated_test = test_df[test_df["action"] == "rated"]
+    highly_rated_test = rated_test[rated_test["rating"].astype(float) >= 4.0]
+    positive_test = pd.concat([completed_test, highly_rated_test])
+    for uid, group in positive_test.groupby("user_id"):
         ground_truth[uid] = set(group["course_id"].tolist())
 
     results: dict[str, dict] = {}
@@ -277,7 +281,7 @@ def write_report(results: dict, out_dir: Path) -> None:
     lines = ["# Baselines Evaluation", "", f"Date: {date_str}", "", "| Recommender | Precision@10 | Recall@10 | NDCG@10 | Users |", "|---|---|---|---|---|"]
     for name, m in results.items():
         lines.append(f"| {name} | {m['precision_at_10']} | {m['recall_at_10']} | {m['ndcg_at_10']} | {m['num_test_users_evaluated']} |")
-    lines.extend(["", "Ground truth: courses completed by test users in held-out interactions.", "Fit only on train users and train interactions."])
+    lines.extend(["", "Ground truth: completed courses + courses rated >= 4 by test users in held-out interactions.", "Fit only on train users and train interactions."])
 
     md_path = eval_dir / "baselines.md"
     json_path = eval_dir / "baselines.json"

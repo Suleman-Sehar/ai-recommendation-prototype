@@ -1,20 +1,20 @@
 {
   "random": {
-    "precision_at_10": 0.0015,
-    "recall_at_10": 0.005,
-    "ndcg_at_10": 0.007,
-    "num_test_users_evaluated": 67
-  },
-  "popularity": {
-    "precision_at_10": 0.0015,
-    "recall_at_10": 0.005,
-    "ndcg_at_10": 0.0027,
-    "num_test_users_evaluated": 67
-  },
-  "user_cf": {
     "precision_at_10": 0.0,
     "recall_at_10": 0.0,
     "ndcg_at_10": 0.0,
-    "num_test_users_evaluated": 67
+    "num_test_users_evaluated": 85
+  },
+  "popularity": {
+    "precision_at_10": 0.0047,
+    "recall_at_10": 0.0333,
+    "ndcg_at_10": 0.0128,
+    "num_test_users_evaluated": 85
+  },
+  "user_cf": {
+    "precision_at_10": 0.0012,
+    "recall_at_10": 0.0118,
+    "ndcg_at_10": 0.0034,
+    "num_test_users_evaluated": 85
   }
 }
