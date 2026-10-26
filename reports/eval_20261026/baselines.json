@@ -1,20 +1,71 @@
 {
   "random": {
-    "precision_at_10": 0.0,
-    "recall_at_10": 0.0,
-    "ndcg_at_10": 0.0,
-    "num_test_users_evaluated": 85
+    "k5": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "ndcg": 0.0,
+      "hit_rate": 0.0,
+      "users_evaluated": 85
+    },
+    "k10": {
+      "precision": 0.0059,
+      "recall": 0.0451,
+      "ndcg": 0.0191,
+      "hit_rate": 0.0588,
+      "users_evaluated": 85
+    },
+    "k20": {
+      "precision": 0.0024,
+      "recall": 0.0471,
+      "ndcg": 0.0169,
+      "hit_rate": 0.0471,
+      "users_evaluated": 85
+    }
   },
   "popularity": {
-    "precision_at_10": 0.0047,
-    "recall_at_10": 0.0333,
-    "ndcg_at_10": 0.0128,
-    "num_test_users_evaluated": 85
+    "k5": {
+      "precision": 0.0047,
+      "recall": 0.0098,
+      "ndcg": 0.0057,
+      "hit_rate": 0.0235,
+      "users_evaluated": 85
+    },
+    "k10": {
+      "precision": 0.0047,
+      "recall": 0.0333,
+      "ndcg": 0.0128,
+      "hit_rate": 0.0471,
+      "users_evaluated": 85
+    },
+    "k20": {
+      "precision": 0.0059,
+      "recall": 0.0725,
+      "ndcg": 0.024,
+      "hit_rate": 0.1059,
+      "users_evaluated": 85
+    }
   },
   "user_cf": {
-    "precision_at_10": 0.0012,
-    "recall_at_10": 0.0118,
-    "ndcg_at_10": 0.0034,
-    "num_test_users_evaluated": 85
+    "k5": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "ndcg": 0.0,
+      "hit_rate": 0.0,
+      "users_evaluated": 85
+    },
+    "k10": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "ndcg": 0.0,
+      "hit_rate": 0.0,
+      "users_evaluated": 85
+    },
+    "k20": {
+      "precision": 0.0012,
+      "recall": 0.0176,
+      "ndcg": 0.005,
+      "hit_rate": 0.0235,
+      "users_evaluated": 85
+    }
   }
 }

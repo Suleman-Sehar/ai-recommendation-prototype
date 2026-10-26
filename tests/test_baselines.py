@@ -185,18 +185,26 @@ class TestEvaluation:
         assert "random" in results
         assert "popularity" in results
         assert "user_cf" in results
-        for name, m in results.items():
-            assert "precision_at_10" in m
-            assert "recall_at_10" in m
-            assert "ndcg_at_10" in m
-            assert 0.0 <= m["precision_at_10"] <= 1.0
-            assert 0.0 <= m["recall_at_10"] <= 1.0
-            assert 0.0 <= m["ndcg_at_10"] <= 1.0
+        for name, k_results in results.items():
+            assert "k5" in k_results
+            assert "k10" in k_results
+            assert "k20" in k_results
+            for k_key, m in k_results.items():
+                assert "precision" in m
+                assert "recall" in m
+                assert "ndcg" in m
+                assert "hit_rate" in m
+                assert "users_evaluated" in m
+                assert 0.0 <= m["precision"] <= 1.0
+                assert 0.0 <= m["recall"] <= 1.0
+                assert 0.0 <= m["ndcg"] <= 1.0
+                assert 0.0 <= m["hit_rate"] <= 1.0
 
     def test_evaluation_uses_test_users_only(self, data):
         _, interactions, splits = data
         results = evaluate_baselines()
         _, test_users = _user_sets_from_splits(splits, interactions)
         # Each recommender evaluates the same set of test users with ground truth
-        for m in results.values():
-            assert m["num_test_users_evaluated"] <= len(test_users)
+        for k_results in results.values():
+            for m in k_results.values():
+                assert m["users_evaluated"] <= len(test_users)

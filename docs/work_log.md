@@ -43,8 +43,10 @@
 - Hard guardrail: completed courses always excluded
 - Fit only on train users and train interactions (derived from train_interactions split)
 - Each recommender saves fitted state via pickle to models/
-- Re-evaluated on new temporal splits: 67 test users with ground truth
-- Results: random P@10=0.0015, popularity P@10=0.0015, user_cf P@10=0.0
+- Re-evaluated on temporal splits: 85 test users with ground truth (completed + rated>=4)
+- Ground truth expanded from completed-only to completed+rated>=4 (61% had empty GT under completed-only)
+- Added src/evaluate/metrics.py: Precision@K, Recall@K, NDCG@K, Hit Rate@K at K=5, K=10, K=20
+- Results at K=10: random P@10=0.0059 Hit=0.0588, popularity P@10=0.0047 Hit=0.0471, user_cf P@10=0.0 Hit=0.0
 - Saved reports/eval_20261026/baselines.md and baselines.json (committed)
-- Wrote tests/test_baselines.py: 11 tests covering interface, completed-exclusion, random reproducibility, popularity ranking, CF cold-start fallback, CF completed-exclusion, evaluation structure
+- Wrote tests/test_baselines.py: 11 tests covering interface, completed-exclusion, random reproducibility, popularity ranking, CF cold-start fallback, CF completed-exclusion, evaluation structure with multi-K
 - All 11 tests pass

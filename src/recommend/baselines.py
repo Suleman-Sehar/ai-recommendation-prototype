@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import math
 import os
 import pickle
 import random
@@ -20,9 +19,10 @@ from src.config import (
     USERS_PATH,
     CATALOG_PATH,
     RECOMMENDATION_N,
-    TRAIN_RATIO,
+    EVAL_KS,
 )
 from src.data.loader import load_catalog, load_users, load_interactions, load_splits
+from src.evaluate.metrics import evaluate_recommender
 
 MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 
@@ -194,20 +194,6 @@ class UserCFRecommender(BaseRecommender):
         return self._exclude_completed(ranked, user_id, n)
 
 
-def _ndcg_at_k(recommended: list[str], ground_truth: set[str], k: int) -> float:
-    if not ground_truth:
-        return 0.0
-    dcg = 0.0
-    for i, cid in enumerate(recommended[:k]):
-        rel = 1.0 if cid in ground_truth else 0.0
-        if rel > 0:
-            dcg += rel / math.log2(i + 2)
-    idcg = sum(1.0 / math.log2(i + 2) for i in range(min(len(ground_truth), k)))
-    if idcg == 0:
-        return 0.0
-    return dcg / idcg
-
-
 def evaluate_baselines() -> dict:
     catalog = load_catalog(CATALOG_PATH)
     users = load_users(USERS_PATH)
@@ -225,7 +211,7 @@ def evaluate_baselines() -> dict:
     train_df = df[df["id"].isin(train_ids)]
     test_df = df[df["id"].isin(test_ids)]
     train_users = set(train_df["user_id"].tolist())
-    test_users = set(test_df["user_id"].tolist())
+    test_users = sorted(set(test_df["user_id"].tolist()))
 
     recs = {
         "random": RandomRecommender(),
@@ -250,24 +236,7 @@ def evaluate_baselines() -> dict:
 
     results: dict[str, dict] = {}
     for name, rec in recs.items():
-        precisions = []
-        recalls = []
-        ndcgs = []
-        for uid in test_users:
-            recommended = rec.recommend(uid, RECOMMENDATION_N)
-            gt = ground_truth.get(uid, set())
-            if not gt:
-                continue
-            hit = len(set(recommended) & gt)
-            precisions.append(hit / len(recommended) if recommended else 0.0)
-            recalls.append(hit / len(gt))
-            ndcgs.append(_ndcg_at_k(recommended, gt, RECOMMENDATION_N))
-        results[name] = {
-            "precision_at_10": round(np.mean(precisions), 4) if precisions else 0.0,
-            "recall_at_10": round(np.mean(recalls), 4) if recalls else 0.0,
-            "ndcg_at_10": round(np.mean(ndcgs), 4) if ndcgs else 0.0,
-            "num_test_users_evaluated": len(precisions),
-        }
+        results[name] = evaluate_recommender(rec, test_users, ground_truth, ks=EVAL_KS)
 
     return results
 
@@ -278,10 +247,24 @@ def write_report(results: dict, out_dir: Path) -> None:
     eval_dir = out_dir / f"eval_{date_str}"
     eval_dir.mkdir(parents=True, exist_ok=True)
 
-    lines = ["# Baselines Evaluation", "", f"Date: {date_str}", "", "| Recommender | Precision@10 | Recall@10 | NDCG@10 | Users |", "|---|---|---|---|---|"]
-    for name, m in results.items():
-        lines.append(f"| {name} | {m['precision_at_10']} | {m['recall_at_10']} | {m['ndcg_at_10']} | {m['num_test_users_evaluated']} |")
-    lines.extend(["", "Ground truth: completed courses + courses rated >= 4 by test users in held-out interactions.", "Fit only on train users and train interactions."])
+    lines = [
+        "# Baselines Evaluation",
+        "",
+        f"Date: {date_str}",
+        "",
+        "Ground truth: completed courses + courses rated >= 4 by test users in held-out interactions.",
+        "Fit only on train users and train interactions.",
+        "",
+        "| Recommender | K | Precision@K | Recall@K | NDCG@K | Hit Rate@K | Users |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for name, k_results in results.items():
+        for k_key, m in k_results.items():
+            k = k_key.replace("k", "")
+            lines.append(
+                f"| {name} | {k} | {m['precision']} | {m['recall']} | {m['ndcg']} | {m['hit_rate']} | {m['users_evaluated']} |"
+            )
+    lines.extend(["", "Metrics: Precision@K, Recall@K, NDCG@K, Hit Rate@K (fraction of users with >=1 hit in top-K)."])
 
     md_path = eval_dir / "baselines.md"
     json_path = eval_dir / "baselines.json"

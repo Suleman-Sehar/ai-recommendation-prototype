@@ -50,3 +50,10 @@
 - Baselines re-evaluated with new ground truth: 85 test users with non-empty ground truth (up from 67), avg ground truth size increased.
 - Results: random P@10=0.0, popularity P@10=0.0047, user_cf P@10=0.0012
 - Reports overwritten in reports/eval_20261026/baselines.md and baselines.json
+
+## 2026-10-26 — Phase 2 Fix: Added Hit Rate@10 and multi-K evaluation
+- Added Hit Rate@10 and multi-K evaluation because ground truth is size-1 for 79% of test users; relative comparisons more informative than absolute P@10.
+- Evaluation now computes Precision@K, Recall@K, NDCG@K, Hit Rate@K at K=5, K=10, K=20.
+- New metrics module at src/evaluate/metrics.py.
+- Results at K=10: random P@10=0.0059, popularity P@10=0.0047, user_cf P@10=0.0. Hit Rate@10: random 0.0588, popularity 0.0471, user_cf 0.0.
+- Reports overwritten in reports/eval_20261026/baselines.md and baselines.json
