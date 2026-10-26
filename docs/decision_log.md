@@ -20,6 +20,14 @@
 - Train/test: 80/20 user-level split, no user appears in both
 - Generator writes to data/ (gitignored); checksums.json enables reproducibility verification
 
+## 2026-10-26 — Phase 1 Fix: Temporal per-user train/test split
+- Initial user-level split made CF untestable (all test users had zero train interactions); corrected to per-user temporal split before any recommender was tuned.
+- splits.json now stores: train_interactions (list of interaction ids), test_holdout (list of interaction ids), challenge_users (user_id list)
+- Per-user temporal split: users with >=3 interactions put last 20% (min 1) in test holdout by timestamp; users with 1-2 interactions all go to train; challenge users all interactions to train
+- All non-challenge users appear in BOTH train and test interaction data
+- interactions.csv now includes unique "id" column per interaction
+- Results: 1750 train interactions, 342 test holdout, 171 users with test holdout, avg holdout size 2.2, 20 challenge users
+
 ## 2026-10-26 — Phase 2
 - Three recommenders: Random (seed-controlled), Popularity (completed-count ranking), UserCF (cosine similarity, K=20 neighbors, cold-start -> popularity)
 - Common interface: recommend(user_id, n=10) -> list[str]

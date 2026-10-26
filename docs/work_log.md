@@ -24,6 +24,18 @@
 - Wrote tests/test_generator.py: 30 tests covering schema, constraints, distribution, splits, reproducibility
 - All 30 tests pass
 
+## 2026-10-26 — Phase 1 Fix: Temporal per-user train/test split
+- Rewrote generator to use per-user temporal split instead of user-level split
+- interactions.csv now includes unique "id" column per interaction
+- splits.json stores: train_interactions (list of ids), test_holdout (list of ids), challenge_users (user_id list)
+- Users with >=3 interactions: last 20% (min 1) by timestamp go to test holdout, rest to train
+- Users with 1-2 interactions: all to train (no test ground truth)
+- Challenge users: all interactions to train (cold-start, evaluated separately)
+- All non-challenge users appear in BOTH train and test interaction data
+- Wrote tests/test_generator.py: 32 tests covering schema, constraints, distribution, temporal split, reproducibility
+- All 32 tests pass
+- Results: 1750 train interactions, 342 test holdout, 171 users with test holdout, avg holdout size 2.2, 20 challenge users
+
 ## 2026-10-26 — Phase 2: Baselines
 - Created src/recommend/__init__.py and src/recommend/baselines.py
 - Implemented RandomRecommender (seed-controlled, excludes completed), PopularityRecommender (ranks by completed count across train users), UserCFRecommender (cosine similarity on user-item matrix, K=20 neighbors, cold-start falls back to popularity)

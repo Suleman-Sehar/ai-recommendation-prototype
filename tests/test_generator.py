@@ -144,7 +144,7 @@ class TestInteractions:
 
     def test_interaction_schema(self):
         rows = _read_csv(INTERACTIONS_PATH)
-        assert set(rows[0].keys()) == {"user_id", "course_id", "action", "rating", "timestamp"}
+        assert set(rows[0].keys()) == {"id", "user_id", "course_id", "action", "rating", "timestamp"}
 
     def test_actions_valid(self):
         rows = _read_csv(INTERACTIONS_PATH)
@@ -207,35 +207,93 @@ class TestSplits:
     def test_splits_schema(self):
         with open(SPLITS_PATH, encoding="utf-8") as f:
             splits = json.load(f)
-        assert "train_users" in splits
-        assert "test_users" in splits
+        assert "train_interactions" in splits
+        assert "test_holdout" in splits
         assert "challenge_users" in splits
 
-    def test_train_test_split_ratio(self):
+    def test_train_test_temporal_split(self):
         with open(SPLITS_PATH, encoding="utf-8") as f:
             splits = json.load(f)
-        train = set(splits["train_users"])
-        test = set(splits["test_users"])
+        train_ids = set(splits["train_interactions"])
+        test_ids = set(splits["test_holdout"])
         challenge = set(splits["challenge_users"])
+
+        # No overlap between train and test interaction ids
+        assert train_ids.isdisjoint(test_ids)
+
+        # All non-challenge users appear in BOTH train and test interaction data
+        interactions = _read_csv(INTERACTIONS_PATH)
+        challenge_users = set(splits["challenge_users"])
+        by_user: dict[str, list[dict]] = {}
+        for it in interactions:
+            if it["user_id"] not in challenge_users:
+                by_user.setdefault(it["user_id"], []).append(it)
+
+        train_interaction_ids = set(splits["train_interactions"])
+        test_interaction_ids = set(splits["test_holdout"])
+
+        users_with_train = set()
+        users_with_test = set()
+        for it in interactions:
+            uid = it["user_id"]
+            if uid in challenge_users:
+                continue
+            if it["id"] in train_interaction_ids:
+                users_with_train.add(uid)
+            if it["id"] in test_interaction_ids:
+                users_with_test.add(uid)
+
+        # Every non-challenge user with >=3 interactions has test holdout
+        non_challenge_users = set(by_user.keys())
+        assert users_with_train == non_challenge_users, "All non-challenge users must have train interactions"
         
-        # No overlap between train/test/challenge
-        assert train.isdisjoint(test)
-        assert train.isdisjoint(challenge)
-        assert test.isdisjoint(challenge)
-        
-        # All users accounted for
-        all_users = train | test | challenge
-        user_rows = _read_csv(USERS_PATH)
-        all_user_ids = {r["user_id"] for r in user_rows}
-        assert all_users == all_user_ids
-        
+        # Users with >=3 interactions should be in test
+        users_with_ge3 = {uid for uid, ints in by_user.items() if len(ints) >= 3}
+        assert users_with_test == users_with_ge3, f"Users with >=3 interactions should have test holdout. Test users: {users_with_test}, Ge3 users: {users_with_ge3}"
+
         # Challenge count
         assert len(challenge) == CHALLENGE_USER_COUNT
-        
-        # Approximate 80/20 split
-        non_challenge = train | test
-        train_ratio = len(train) / len(non_challenge)
-        assert abs(train_ratio - TRAIN_RATIO) < 0.05
+
+        # Challenge users have no interactions in test holdout
+        challenge_test = set()
+        for it in interactions:
+            if it["user_id"] in challenge_users and it["id"] in test_interaction_ids:
+                challenge_test.add(it["id"])
+        assert len(challenge_test) == 0, "Challenge users must have no interactions in test holdout"
+
+
+class TestTemporalSplit:
+    def test_test_interactions_are_latest_by_timestamp(self):
+        with open(SPLITS_PATH, encoding="utf-8") as f:
+            splits = json.load(f)
+        train_ids = set(splits["train_interactions"])
+        test_ids = set(splits["test_holdout"])
+        challenge = set(splits["challenge_users"])
+
+        interactions = _read_csv(INTERACTIONS_PATH)
+        by_user: dict[str, list[dict]] = {}
+        for it in interactions:
+            if it["user_id"] not in challenge:
+                by_user.setdefault(it["user_id"], []).append(it)
+
+        for uid, user_ints in by_user.items():
+            if len(user_ints) < 3:
+                continue  # 1-2 interactions: all train
+            user_test = [it for it in user_ints if it["id"] in test_ids]
+            user_train = [it for it in user_ints if it["id"] in train_ids]
+            if not user_test:
+                continue
+            # All test interactions must have timestamps >= all train interactions for this user
+            max_train_ts = max(it["timestamp"] for it in user_train) if user_train else ""
+            min_test_ts = min(it["timestamp"] for it in user_test)
+            assert min_test_ts >= max_train_ts, f"Temporal split violated for user {uid}"
+
+    def test_train_test_counts_match(self):
+        with open(SPLITS_PATH, encoding="utf-8") as f:
+            splits = json.load(f)
+        interactions = _read_csv(INTERACTIONS_PATH)
+        total = len(interactions)
+        assert splits["train_count"] + splits["test_count"] == total
 
 
 class TestReproducibility:
