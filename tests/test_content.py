@@ -1,5 +1,3 @@
-"""Tests for Phase 3 content-based recommender."""
-
 from __future__ import annotations
 
 import pandas as pd
@@ -29,7 +27,6 @@ class TestContentBased:
 
         cb = ContentBased()
         cb.fit(catalog, train_df)
-        # Matrix should have shape (n_courses, n_features)
         assert cb.course_vectors.shape[0] == len(catalog)
         assert cb.course_vectors.shape[1] > 0
 
@@ -43,10 +40,9 @@ class TestContentBased:
 
         cb = ContentBased()
         cb.fit(catalog, train_df)
-        # Check weights are applied
-        assert cb.SIGNAL_WEIGHTS["completed"] == 1.0
-        assert cb.SIGNAL_WEIGHTS["rated_high"] == 0.8
-        assert cb.SIGNAL_WEIGHTS["rated_low"] == 0.3
+        assert cb.SIGNAL_WEIGHTS["completed"] == 2.0
+        assert cb.SIGNAL_WEIGHTS["rated_high"] == 1.5
+        assert cb.SIGNAL_WEIGHTS["rated_low"] == 0.5
         assert cb.SIGNAL_WEIGHTS["viewed"] == 0.1
 
     def test_completed_courses_excluded(self):
@@ -67,7 +63,7 @@ class TestContentBased:
                 continue
             result = cb.recommend(uid, 20)
             overlap = set(result) & completed
-            assert overlap == set(), f"ContentBased recommended completed courses: {overlap}"
+            assert overlap == set()
 
     def test_cold_start_falls_back_to_popularity(self):
         catalog = load_catalog(CATALOG_PATH)
@@ -115,6 +111,57 @@ class TestContentBased:
 
         cb = ContentBased()
         cb.fit(catalog, train_df)
-        # Check similarities are in range [0, 1] for non-negative TF-IDF (allow small float errors)
         sim = cosine_similarity(cb.course_vectors[0:1], cb.course_vectors[0:10]).flatten()
         assert all(-1e-10 <= s <= 1.0 + 1e-10 for s in sim)
+
+    def test_profile_closer_to_completed_than_viewed(self):
+        from src.config import CATALOG_PATH, INTERACTIONS_PATH, SPLITS_PATH
+        from src.data.loader import load_catalog, load_interactions, load_splits
+        from src.recommend.content import ContentBased
+        from sklearn.preprocessing import normalize
+        from sklearn.metrics.pairwise import cosine_similarity
+        import pandas as pd
+
+        catalog = load_catalog(CATALOG_PATH)
+        interactions = load_interactions(INTERACTIONS_PATH)
+        splits = load_splits(SPLITS_PATH)
+        df = pd.DataFrame(interactions)
+        df['id'] = df['id'].astype(str)
+        train_ids = set(splits['train_interactions'])
+        train_df = df[df['id'].isin(train_ids)]
+
+        cb = ContentBased()
+        cb.SIGNAL_WEIGHTS = {'completed': 2.0, 'rated_high': 1.5, 'rated_low': 0.5, 'viewed': 0.1}
+        cb.fit(catalog, train_df)
+
+        found = False
+        for uid, interactions_u in cb.user_interactions.items():
+            acts = train_df[train_df['user_id'] == uid]
+            comp = acts[acts['action'] == 'completed']
+            view = acts[acts['action'] == 'viewed']
+            if len(comp) == 1 and len(view) >= 3:
+                profile = None
+                for cid, weight in interactions_u:
+                    if cid not in cb.course_index:
+                        continue
+                    idx = cb.course_index[cid]
+                    vec = cb.course_vectors[idx]
+                    if profile is None:
+                        profile = vec * weight
+                    else:
+                        profile = profile + vec * weight
+                profile_n = normalize(profile, norm='l2')
+                comp_cid = comp['course_id'].iloc[0]
+                comp_sim = cosine_similarity(profile_n, cb.course_vectors[cb.course_index[comp_cid]:cb.course_index[comp_cid]+1])[0][0]
+                min_view_sim = float('inf')
+                for _, vr in view.iterrows():
+                    vid = vr['course_id']
+                    if vid not in cb.course_index:
+                        continue
+                    vsim = cosine_similarity(profile_n, cb.course_vectors[cb.course_index[vid]:cb.course_index[vid]+1])[0][0]
+                    if vsim < min_view_sim:
+                        min_view_sim = vsim
+                assert comp_sim > min_view_sim
+                found = True
+                break
+        assert found
