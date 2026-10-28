@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.config import CATALOG_PATH, INTERACTIONS_PATH, SPLITS_PATH, EVAL_KS
-from src.data.loader import load_catalog, load_interactions, load_splits
-from src.evaluate.metrics import evaluate_recommender
-from src.recommend.hybrid import Hybrid
-from src.recommend.llm_rerank import LLMReranker
+from config import CATALOG_PATH, INTERACTIONS_PATH, SPLITS_PATH, EVAL_KS
+from data.loader import load_catalog, load_interactions, load_splits
+from evaluate.metrics import evaluate_recommender
+from recommend.hybrid import Hybrid
+from recommend.llm_rerank import LLMReranker
 
 
 class RerankedWrapper:
