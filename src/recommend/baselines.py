@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.config import (
+from config import (
     DATA_DIR,
     INTERACTIONS_PATH,
     SPLITS_PATH,
@@ -21,8 +21,8 @@ from src.config import (
     RECOMMENDATION_N,
     EVAL_KS,
 )
-from src.data.loader import load_catalog, load_users, load_interactions, load_splits
-from src.evaluate.metrics import evaluate_recommender
+from data.loader import load_catalog, load_users, load_interactions, load_splits
+from evaluate.metrics import evaluate_recommender
 
 MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 

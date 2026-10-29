@@ -12,9 +12,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
 
-from src.config import RECOMMENDATION_N
-from src.evaluate.metrics import evaluate_recommender
-from src.recommend.baselines import PopularityRecommender
+from config import RECOMMENDATION_N
+from evaluate.metrics import evaluate_recommender
+from recommend.baselines import PopularityRecommender
 
 
 class ContentBased:

@@ -6,10 +6,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.config import RECOMMENDATION_N
-from src.evaluate.metrics import evaluate_recommender
-from src.recommend.baselines import UserCFRecommender, PopularityRecommender
-from src.recommend.content import ContentBased
+from config import RECOMMENDATION_N
+from evaluate.metrics import evaluate_recommender
+from recommend.baselines import UserCFRecommender, PopularityRecommender
+from recommend.content import ContentBased
 
 
 class Hybrid:

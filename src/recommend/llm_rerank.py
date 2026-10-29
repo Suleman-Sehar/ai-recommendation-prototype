@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import hashlib
 import json
 import os
@@ -15,7 +18,7 @@ class LLMReranker:
     def __init__(self, cache_dir: Path | None = None):
         self.cache_dir = cache_dir or Path(".llm_cache")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.api_key = os.environ.get("OPENAI_API_KEY")
+        self.api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
 
     def _cache_key(self, user_id: str, candidate_ids: list[str]) -> str:
         key_str = f"{user_id}:{','.join(candidate_ids)}"
@@ -47,8 +50,6 @@ Re-rank these candidates by relevance to the user's interests and history. Retur
         return prompt
 
     def _mock_llm_call(self, prompt: str) -> str:
-        # This is a stub/mock - in real usage would call API
-        # For testing, we expect to be mocked
         raise NotImplementedError("No API call in stub mode")
 
     def rerank(self, user_id: str, candidates: list[dict], user_history: list[dict] | None = None) -> list[str]:
@@ -57,54 +58,41 @@ Re-rank these candidates by relevance to the user's interests and history. Retur
 
         candidate_ids = [c["id"] for c in candidates]
 
-        # Cold-start: if user has zero history, use description embeddings (TF-IDF) to rank
         if not user_history or len(user_history) == 0:
-            # Use TF-IDF on descriptions to rank by semantic similarity to generic profile
             texts = [str(c.get("description", "")) for c in candidates]
             if not texts:
                 return candidate_ids
             try:
                 vectorizer = TfidfVectorizer()
                 tfidf_matrix = vectorizer.fit_transform(texts)
-                # Use centroid of all as generic profile
                 generic = tfidf_matrix.mean(axis=0)
-                # Compute similarity
                 sims = cosine_similarity(generic, tfidf_matrix).flatten()
-                # Sort by similarity
                 ranked_idx = sims.argsort()[::-1]
                 return [candidate_ids[i] for i in ranked_idx]
             except Exception:
                 return candidate_ids
 
-        # Check cache
         cache_key = self._cache_key(user_id, candidate_ids)
         cache_path = self._cache_path(cache_key)
         if cache_path.exists():
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
                     cached = json.load(f)
-                # Validate cached result
                 if isinstance(cached, list) and all(cid in candidate_ids for cid in cached) and len(cached) == len(candidate_ids):
                     return cached
             except Exception:
                 pass
 
-        # If no API key, return hybrid order unchanged (stub path)
         if not self.api_key:
             return candidate_ids
 
-        # Build prompt
         prompt = self._build_prompt(user_history, candidates)
 
         try:
-            # In production, would call LLM here
             response = self._mock_llm_call(prompt)
-            # Parse response
             parsed = json.loads(response)
             if isinstance(parsed, list):
-                # Validate: contains exactly the same course_ids, no hallucination
                 if set(parsed) == set(candidate_ids) and len(parsed) == len(candidate_ids):
-                    # Save to cache
                     with open(cache_path, "w", encoding="utf-8") as f:
                         json.dump(parsed, f)
                     return parsed
