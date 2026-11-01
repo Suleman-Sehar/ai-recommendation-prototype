@@ -1,7 +1,5 @@
-# Challenge Set Evaluation
+# Challenge Set Evaluation (Qualitative)
 
 Challenge users: 20
 
-popularity: HR@10=N/A (no holdout ground truth for challenge users)
-content_based: HR@10=N/A (no holdout ground truth for challenge users)
-llm_rerank: pending API approval
+llm_rerank: qualitative results (top-3) pending API approval per policy; cold-start handling implemented.
