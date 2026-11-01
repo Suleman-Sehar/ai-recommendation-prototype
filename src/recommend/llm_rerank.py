@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -52,13 +53,12 @@ Re-rank these candidates by relevance to the user's interests and history. Retur
     def _mock_llm_call(self, prompt: str) -> str:
         raise NotImplementedError("No API call in stub mode")
 
-    def rerank(self, user_id: str, candidates: list[dict], user_history: list[dict] | None = None) -> list[str]:
+    def rerank(self, user_id, candidates, user_history=None):
         if user_history is None:
             user_history = []
-
         candidate_ids = [c["id"] for c in candidates]
 
-        if not user_history or len(user_history) == 0:
+        if not user_history:
             texts = [str(c.get("description", "")) for c in candidates]
             if not texts:
                 return candidate_ids
@@ -78,7 +78,7 @@ Re-rank these candidates by relevance to the user's interests and history. Retur
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
                     cached = json.load(f)
-                if isinstance(cached, list) and all(cid in candidate_ids for cid in cached) and len(cached) == len(candidate_ids):
+                if isinstance(cached, list) and set(cached) == set(candidate_ids) and len(cached) == len(candidate_ids):
                     return cached
             except Exception:
                 pass
@@ -89,14 +89,29 @@ Re-rank these candidates by relevance to the user's interests and history. Retur
         prompt = self._build_prompt(user_history, candidates)
 
         try:
-            response = self._mock_llm_call(prompt)
-            parsed = json.loads(response)
-            if isinstance(parsed, list):
-                if set(parsed) == set(candidate_ids) and len(parsed) == len(candidate_ids):
-                    with open(cache_path, "w", encoding="utf-8") as f:
-                        json.dump(parsed, f)
-                    return parsed
-        except Exception:
+            import openai as _oai
+            client = _oai.OpenAI(api_key=self.api_key, base_url="https://openrouter.ai/api/v1")
+            completion = client.chat.completions.create(
+                model="openai/gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=500
+            )
+            response = completion.choices[0].message.content
+            clean = response.strip()
+            while clean and clean[0] == chr(96):
+                clean = clean[1:]
+            if clean.lower().startswith("json"):
+                clean = clean[4:]
+            while clean and clean[-1] == chr(96):
+                clean = clean[:-1]
+            clean = clean.strip()
+            parsed = json.loads(clean)
+            if isinstance(parsed, list) and set(parsed) == set(candidate_ids) and len(parsed) == len(candidate_ids):
+                with open(cache_path, "w", encoding="utf-8") as f:
+                    json.dump(parsed, f)
+                return parsed
+        except Exception as e:
             pass
 
         return candidate_ids
+
