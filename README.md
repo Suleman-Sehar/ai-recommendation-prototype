@@ -17,6 +17,7 @@ cd ai-recommendation-prototype
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+python scripts/run_llm_rerank.py --dry-run --limit 3
 ```
 
 ## Running without an API key
@@ -34,23 +35,49 @@ Popularity and content-based recommenders run fully offline. CF and hybrid run o
 | hybrid | 3.53% | 0.0097 | 0.0035 |
 | llm_rerank | 6.52% | 0.0180 | 0.0065 |
 
+Note: random outperforms popularity at K=10 due to high variance on sparse ground truth (79% size-1 ground truth). At K=20, popularity leads (HR=10.59% vs random HR=4.71%), which is the expected direction.
+
 ## Project structure
 
 ```
-src/config.py
-src/__main__.py
-src/data/generator.py
-src/data/loader.py
-src/evaluate/metrics.py
-src/recommend/baselines.py
-src/recommend/content.py
-src/recommend/guardrails.py
-src/recommend/hybrid.py
-src/recommend/llm_rerank.py
-scripts/run_llm_rerank.py
-tests/
-reports/eval_20261026/
-docs/
+.
+├── .env.example
+├── .gitignore
+├── LICENSE
+├── README.md
+├── pyproject.toml
+├── requirements.txt
+├── data/
+│   ├── catalog.csv
+│   ├── checksums.json
+│   ├── interactions.csv
+│   ├── splits.json
+│   └── users.csv
+├── docs/
+│   ├── MENTOR_REVIEW.md
+│   ├── SLIDES_OUTLINE.md
+│   ├── decision_log.md
+│   ├── requirements.md
+│   └── work_log.md
+├── models/
+│   ├── popularity.pkl
+│   ├── random.pkl
+│   └── user_cf.pkl
+├── reports/
+│   ├── eval_20261026/
+│   └── raw/
+├── scripts/
+│   └── run_llm_rerank.py
+├── src/
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── config.py
+│   ├── data/
+│   ├── evaluate/
+│   └── recommend/
+└── tests/
+    ├── conftest.py
+    └── test_*.py
 ```
 
 ## Acceptance criteria
